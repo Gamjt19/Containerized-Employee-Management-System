@@ -1,0 +1,141 @@
+name: Employee Management CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+
+  test:
+    name: Lint and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Backend lint
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install flake8
+
+      - name: Backend lint
+        run: |
+          flake8 backend --exclude=backend/tests
+
+      - name: Backend tests
+        run: |
+          pytest backend/tests
+
+
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: |
+          docker build \
+            -t employee-backend:${{ github.sha }} \
+            ./backend
+
+      - name: Build frontend image
+        run: |
+          docker build \
+            --build-arg VITE_API_URL=/api \
+            -t employee-frontend:${{ github.sha }} \
+            ./frontend
+
+
+  docker-scan:
+    name: Docker Scan
+    runs-on: ubuntu-latest
+    needs: docker-build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: |
+          docker build \
+            -t employee-backend:scan \
+            ./backend
+
+      - name: Build frontend image
+        run: |
+          docker build \
+            --build-arg VITE_API_URL=/api \
+            -t employee-frontend:scan \
+            ./frontend
+
+      - name: Scan backend image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: employee-backend:scan
+          format: table
+          exit-code: 1
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+      - name: Scan frontend image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: employee-frontend:scan
+          format: table
+          exit-code: 1
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+
+  docker-push:
+    name: Docker Hub Push
+    runs-on: ubuntu-latest
+    needs: docker-scan
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build backend image
+        run: |
+          docker build \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/employee-backend:latest \
+            ./backend
+
+      - name: Build frontend image
+        run: |
+          docker build \
+            --build-arg VITE_API_URL=/api \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/employee-frontend:latest \
+            ./frontend
+
+      - name: Push backend image
+        run: |
+          docker push \
+            ${{ secrets.DOCKERHUB_USERNAME }}/employee-backend:latest
+
+      - name: Push frontend image
+        run: |
+          docker push \
+            ${{ secrets.DOCKERHUB_USERNAME }}/employee-frontend:latest
