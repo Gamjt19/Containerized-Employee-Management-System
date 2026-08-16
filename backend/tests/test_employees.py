@@ -6,6 +6,7 @@ def test_get_employees_empty(client):
     assert data["employees"] == []
     assert data["count"] == 0
 
+
 def test_create_employee_success(client):
     """Test creating an employee with valid data."""
     payload = {
@@ -24,6 +25,7 @@ def test_create_employee_success(client):
     assert data["employee"]["salary"] == 72000.00
     assert "id" in data["employee"]
 
+
 def test_create_employee_validation_errors(client):
     """Test creating an employee with missing or invalid fields."""
     # Missing fields
@@ -41,7 +43,8 @@ def test_create_employee_validation_errors(client):
     }
     res = client.post("/api/employees", json=invalid_email_payload)
     assert res.status_code == 400
-    assert any("Email format is invalid" in d for d in res.get_json()["details"])
+    assert any(
+        "Email format is invalid" in d for d in res.get_json()["details"])
 
     # Negative salary
     negative_salary_payload = {
@@ -55,6 +58,7 @@ def test_create_employee_validation_errors(client):
     assert res.status_code == 400
     assert any("non-negative" in d for d in res.get_json()["details"])
 
+
 def test_create_employee_duplicate_email(client, sample_employee):
     """Test creating an employee with an email that already exists."""
     duplicate_payload = {
@@ -66,7 +70,9 @@ def test_create_employee_duplicate_email(client, sample_employee):
     }
     response = client.post("/api/employees", json=duplicate_payload)
     assert response.status_code == 400
-    assert any("already registered" in d for d in response.get_json()["details"])
+    assert any(
+        "already registered" in d for d in response.get_json()["details"])
+
 
 def test_get_employee_by_id(client, sample_employee):
     """Test retrieving an employee by ID."""
@@ -80,6 +86,7 @@ def test_get_employee_by_id(client, sample_employee):
     # Non-existent ID
     res_404 = client.get("/api/employees/99999")
     assert res_404.status_code == 404
+
 
 def test_search_employees(client, sample_employee):
     """Test searching employees across fields."""
@@ -100,6 +107,7 @@ def test_search_employees(client, sample_employee):
     assert res.status_code == 200
     assert len(res.get_json()["employees"]) == 0
 
+
 def test_update_employee(client, sample_employee):
     """Test updating employee details."""
     emp_id = sample_employee["id"]
@@ -118,6 +126,7 @@ def test_update_employee(client, sample_employee):
     # Non-existent employee
     res_404 = client.put("/api/employees/99999", json={"name": "Ghost"})
     assert res_404.status_code == 404
+
 
 def test_delete_employee(client, sample_employee):
     """Test deleting an employee."""

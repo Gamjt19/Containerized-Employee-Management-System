@@ -17,7 +17,8 @@ venv.bak/
 .pytest_cache/
 .coverage
 htmlcov/
-
+venv/
+backend/venv/
 # Node / Frontend
 node_modules/
 dist/

@@ -1,9 +1,10 @@
 import os
 from flask import Flask, jsonify
 from flask_cors import CORS
-from config import get_config, DevelopmentConfig
+from config import get_config
 from models import db
 from routes import health_bp, employees_bp
+
 
 def create_app(config_class=None):
     """Application factory for Flask Employee Management API."""
@@ -47,9 +48,11 @@ def create_app(config_class=None):
         try:
             db.create_all()
         except Exception as e:
-            app.logger.warning(f"Could not initialize database tables on startup: {e}")
+            app.logger.warning(
+                f"Could not initialize database tables on startup: {e}")
 
     return app
+
 
 app = create_app()
 

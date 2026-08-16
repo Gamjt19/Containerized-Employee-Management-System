@@ -1,13 +1,23 @@
 import os
 import sys
+
 import pytest
 
 # Ensure backend root is on sys.path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(
+    0,
+    os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            ".."
+        )
+    )
+)
 
-from app import create_app
-from config import TestingConfig
 from models import db, Employee
+from config import TestingConfig
+from app import create_app
+
 
 @pytest.fixture
 def app():
@@ -20,10 +30,12 @@ def app():
         db.session.remove()
         db.drop_all()
 
+
 @pytest.fixture
 def client(app):
     """A test client for the app."""
     return app.test_client()
+
 
 @pytest.fixture
 def sample_employee(app):
@@ -36,6 +48,8 @@ def sample_employee(app):
             position="Software Engineer",
             salary=85000.00
         )
+
         db.session.add(emp)
         db.session.commit()
+
         return emp.to_dict()

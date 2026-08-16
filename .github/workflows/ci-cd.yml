@@ -31,7 +31,7 @@ jobs:
 
       - name: Backend lint
         run: |
-          flake8 backend --exclude=backend/tests
+          flake8 backend --exclude=backend/tests,backend/venv
 
       - name: Backend tests
         run: |
