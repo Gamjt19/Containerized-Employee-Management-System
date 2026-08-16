@@ -1,34 +1,36 @@
-FROM python:3.12.3-slim AS builder
+# ==============================
+# Stage 1: Build dependencies
+# ==============================
+FROM python:3.12-slim-bookworm AS builder
 
 WORKDIR /build
 
-# Install curl for Docker health check
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Python dependencies
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+RUN pip install --no-cache-dir \
+    --prefix=/install \
+    -r requirements.txt
 
 
-
-#stage 2
-FROM python:3.12.3-slim
+# ==============================
+# Stage 2: Production image
+# ==============================
+FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
+# Install curl for health check
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy application
+# Copy installed Python packages
 COPY --from=builder /install /usr/local
 
+# Copy application
 COPY . .
 
-# Create non-root user and give ownership of application
+# Create non-root user
 RUN adduser --disabled-password --gecos "" appuser \
     && chown -R appuser:appuser /app
 
