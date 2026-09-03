@@ -33,8 +33,8 @@ class Config:
         if custom_url:
             return custom_url
 
-        # URL-encode the password so special characters
-        # such as @, :, /, #, etc. do not break the URI.
+        # Encode special characters in the password
+        # so characters like @, :, /, and # don't break the URI.
         encoded_password = quote_plus(self.DB_PASSWORD)
 
         return (
@@ -60,6 +60,9 @@ class TestingConfig(Config):
 
     TESTING = True
     DEBUG = True
+
+    # SQLite does not support MySQL SSL connection arguments.
+    SQLALCHEMY_ENGINE_OPTIONS = {}
 
     @property
     def SQLALCHEMY_DATABASE_URI(self):
