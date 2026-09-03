@@ -1,4 +1,5 @@
 import os
+import ssl
 
 from dotenv import load_dotenv
 
@@ -34,6 +35,12 @@ class Config:
             f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}"
             f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
         )
+ SQLALCHEMY_ENGINE_OPTIONS = {
+        "connect_args": {
+            "ssl": ssl.create_default_context()
+        }
+    }
+
 
 
 class DevelopmentConfig(Config):
