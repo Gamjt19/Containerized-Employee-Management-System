@@ -1,309 +1,369 @@
-# Project 27 — Containerized Employee Management System
+# Containerized Employee Management System
 
-A full-stack, production-ready **Employee Management System** built with a **React + Vite** frontend and a **Python + Flask** REST API backend, backed by **MySQL**.
+A full-stack Employee Management System built with **React, Flask, and MySQL**, containerized using Docker and orchestrated with Docker Compose.
 
-> [!NOTE]
-> **DevOps & Containerization Notice:**
-> This repository contains the core application code, database schema, and test suite. Dockerfiles, multi-stage builds, Docker Compose, Nginx reverse proxy configuration, health-check daemons, and CI/CD pipelines will be configured in subsequent DevOps learning phases.
-
----
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Database Setup (MySQL)](#database-setup-mysql)
-- [Environment Variables](#environment-variables)
-- [Backend Setup & Running](#backend-setup--running)
-- [Frontend Setup & Running](#frontend-setup--running)
-- [REST API Reference](#rest-api-reference)
-- [Example API Requests](#example-api-requests)
-- [Running Automated Tests](#running-automated-tests)
-- [Future DevOps Roadmap](#future-devops-roadmap)
-
----
+This project demonstrates containerization, multi-service architecture, reverse proxy configuration, automated testing, and CI/CD practices using GitHub Actions.
 
 ## Overview
 
-The Employee Management System provides a clean, responsive interface for organizations to maintain employee directories. It supports standard CRUD operations (Create, Read, Update, Delete) and dynamic multi-field search across employee records.
+The Employee Management System provides a web-based dashboard for managing employee records. It supports CRUD operations, employee statistics, input validation, and dynamic search.
 
----
+The application is structured as separate frontend, backend, and database services, allowing each component to run independently within a containerized environment.
 
-## Features
+## Key Features
 
-- **Employee Listing & Stats:** View all employee records alongside high-level metrics (headcount, departments, average salary, highest salary).
-- **Add Employee:** Create records with real-time field validation (name, unique email format, department, position, non-negative salary).
-- **Edit Employee:** Modify existing employee details with inline feedback.
-- **Delete Confirmation:** Prevent accidental loss with a modal confirmation step.
-- **Dynamic Search & Filtering:** Filter employees instantly by name, email, department, or job title.
-- **Health Check Endpoint:** Decoupled `/api/health` endpoint for uptime monitoring and container probes.
-- **Configurable Architecture:** 100% environment-variable driven configuration for seamless local execution and future containerization.
+- **Employee Management:** Create, view, update, and delete employee records.
+- **Dashboard Analytics:** View employee count, department statistics, and salary metrics.
+- **Search and Filtering:** Search employees by name, email, department, and job title.
+- **Input Validation:** Validate employee information and prevent duplicate email addresses.
+- **REST API:** Flask-based API for communication between frontend and backend.
+- **Health Monitoring:** Dedicated API health endpoint for service monitoring.
+- **Containerization:** Docker-based frontend and backend images.
+- **Service Orchestration:** Docker Compose for managing multiple services.
+- **Reverse Proxy:** Nginx routes frontend requests and API traffic.
+- **Persistent Storage:** Named Docker volume for MySQL data.
+- **CI/CD Automation:** GitHub Actions workflow for automated project validation and Docker image delivery.
 
----
+## Technology Stack
 
-## Tech Stack
+| Category | Technologies |
+|---|---|
+| Frontend | React 18, Vite 5, JavaScript, CSS |
+| Backend | Python 3.12, Flask 3 |
+| Database | MySQL 8 |
+| ORM | Flask-SQLAlchemy |
+| Containerization | Docker, Docker Compose |
+| Web Server | Nginx |
+| CI/CD | GitHub Actions |
+| Testing | Pytest |
+| Security Scanning | Trivy |
+| Container Registry | Docker Hub |
 
-### Frontend
-- **Framework:** React 18
-- **Build Tool:** Vite 5
-- **Icons:** Lucide React
-- **Styling:** Custom Modern CSS (CSS Variables, Flexbox, Responsive Grid)
+## Architecture
 
-### Backend
-- **Language & Framework:** Python 3.12+ / Flask 3.0
-- **ORM & DB Connector:** Flask-SQLAlchemy 3.1 / PyMySQL
-- **CORS Handling:** Flask-CORS
-- **Testing:** Pytest
+The application uses a multi-container architecture with separate services for the frontend, backend, database, and reverse proxy.
 
-### Database
-- **Database Engine:** MySQL 8.0+
+```mermaid
+flowchart TD
+    U[User / Browser]
+    N[Nginx Reverse Proxy]
+    F[React Frontend Container]
+    B[Flask Backend Container]
+    D[(MySQL Database)]
 
----
+    U --> N
+    N -->|Web Requests| F
+    N -->|API Requests /api| B
+    B --> D
+```
+
+### Service Responsibilities
+
+| Service | Responsibility |
+|---|---|
+| Nginx | Entry point and reverse proxy |
+| Frontend | Serves the React application |
+| Backend | Handles REST API requests and business logic |
+| MySQL | Stores employee records |
+
+### Docker Networking
+
+The application uses separate Docker bridge networks:
+
+- `frontend-network`: Enables communication between Nginx, frontend, and backend.
+- `backend-network`: Enables communication between backend and MySQL.
+
+The backend connects to MySQL using the internal Docker service name `mysql`, rather than an external IP address.
+
+### Data Persistence
+
+MySQL data is stored in a named Docker volume:
+
+`mysql-data`
+
+This allows database data to persist across container restarts and recreation.
 
 ## Project Structure
 
 ```text
-Dockerized Employee Managment/
-├── .env.example               # Template environment configuration
-├── .gitignore                 # Excludes .env, build output, and dependencies
-├── README.md                  # System documentation
-├── nginx/
-│   └── README.md              # Placeholder for future Nginx reverse proxy configs
+Containerized-Employee-Management-System/
+│
+├── .github/
+│   └── workflows/          # GitHub Actions workflows
+│
 ├── backend/
-│   ├── app.py                 # Flask application factory and server entry point
-│   ├── requirements.txt       # Backend Python dependencies
-│   ├── schema.sql             # SQL schema definition and seed data
+│   ├── Dockerfile          # Multi-stage backend image
+│   ├── app.py              # Flask application
+│   ├── requirements.txt
+│   ├── schema.sql
 │   ├── config/
-│   │   ├── __init__.py
-│   │   └── config.py          # Environment-driven database and app settings
 │   ├── models/
-│   │   ├── __init__.py
-│   │   └── employee.py        # SQLAlchemy Employee model & payload validation
 │   ├── routes/
-│   │   ├── __init__.py
-│   │   ├── health.py          # GET /api/health route
-│   │   └── employees.py       # CRUD and search routes
-│   └── tests/
-│       ├── __init__.py
-│       ├── conftest.py        # Pytest test fixtures and SQLite test database
-│       ├── test_health.py     # Tests for health status
-│       └── test_employees.py  # Tests for CRUD operations, search, and validation
-└── frontend/
-    ├── index.html             # HTML entry point
-    ├── package.json           # Frontend dependencies and npm scripts
-    ├── vite.config.js         # Vite configuration
-    └── src/
-        ├── main.jsx           # React DOM root entry
-        ├── App.jsx            # Main dashboard component and state management
-        ├── index.css          # Design system stylesheet
-        ├── services/
-        │   └── api.js         # REST API client
-        └── components/
-            ├── Header.jsx           # Top navigation bar with backend status
-            ├── StatsCards.jsx       # Metric overview cards
-            ├── SearchFilter.jsx     # Search box and department dropdown
-            ├── EmployeeTable.jsx    # Data table with actions and empty states
-            ├── EmployeeModal.jsx    # Add / Edit form modal
-            ├── DeleteModal.jsx      # Confirmation deletion dialog
-            └── AlertBanner.jsx      # Success and error notifications
+│   └── tests/              # Pytest test suite
+│
+├── frontend/
+│   ├── Dockerfile          # Multi-stage frontend image
+│   ├── nginx.conf
+│   ├── package.json
+│   └── src/
+│
+├── nginx/
+│   └── nginx.conf          # Main reverse proxy configuration
+│
+├── .env.example
+├── docker-compose.yml
+└── README.md
 ```
 
----
+## Prerequisites
 
-## Database Setup (MySQL)
+Before running the project, ensure the following tools are installed:
 
-1. Make sure MySQL server is installed and running locally.
-2. Log into MySQL and create the database:
-   ```sql
-   CREATE DATABASE employee_db;
-   ```
-3. Initialize the schema and optional sample data using the provided `schema.sql`:
-   ```bash
-   mysql -u <your_mysql_user> -p employee_db < backend/schema.sql
-   ```
-   *Alternatively, the backend application will automatically create the `employees` table on startup if the database exists and credentials are valid.*
+- Docker Desktop or Docker Engine
+- Docker Compose v2
+- Git
 
----
+## Environment Configuration
 
-## Environment Variables
+Clone the repository:
 
-Copy `.env.example` to `.env` in the root or individual folders as needed:
+```bash
+git clone https://github.com/Gamjt19/Containerized-Employee-Management-System.git
+
+cd Containerized-Employee-Management-System
+```
+
+Create the environment file:
 
 ```bash
 cp .env.example .env
 ```
 
-### Environment Variable Reference
+Configure the following variables in `.env`:
 
-| Variable | Description | Default / Example |
-| :--- | :--- | :--- |
-| `DB_HOST` | MySQL database host address | `localhost` |
-| `DB_PORT` | MySQL port | `3306` |
-| `DB_NAME` | Database name | `employee_db` |
-| `DB_USER` | MySQL database user | `employee_user` or `root` |
-| `DB_PASSWORD` | MySQL user password | `your_password` |
-| `FLASK_ENV` | Flask environment mode | `development` |
-| `FLASK_PORT` | Port for Flask backend | `5000` |
-| `VITE_API_URL` | Base URL for REST API in React frontend | `http://localhost:5000/api` |
+```env
+DB_HOST=mysql
+DB_PORT=3306
+DB_NAME=employee_db
+DB_USER=employee_user
+DB_PASSWORD=change_this_password
 
-> [!CAUTION]
-> Never commit actual passwords or `.env` files to Git. The `.gitignore` file is configured to exclude `.env` automatically.
+MYSQL_ROOT_PASSWORD=change_this_root_password
 
----
+FLASK_ENV=production
+FLASK_PORT=5000
 
-## Backend Setup & Running
-
-### 1. Create and Activate a Virtual Environment
-
-**On Windows (PowerShell):**
-```powershell
-cd backend
-python -m venv venv
-.\venv\Scripts\Activate.ps1
+VITE_API_URL=/api
 ```
 
-**On Linux / macOS:**
+Use strong passwords and never commit the actual `.env` file to GitHub.
+
+## Running the Application with Docker
+
+### 1. Build the Frontend Image
+
+The current Compose configuration references a prebuilt frontend image.
+
+Build it before starting the services:
+
+```bash
+docker build \
+  --build-arg VITE_API_URL=/api \
+  -t employee-frontend:1.0 \
+  ./frontend
+```
+
+### 2. Start the Application
+
+Build the backend image and start all services:
+
+```bash
+docker compose up -d --build
+```
+
+### 3. Verify Running Containers
+
+```bash
+docker compose ps
+```
+
+Check application logs:
+
+```bash
+docker compose logs -f
+```
+
+Check individual services:
+
+```bash
+docker compose logs backend
+docker compose logs mysql
+docker compose logs nginx
+```
+
+### 4. Access the Application
+
+Open the following URL in your browser:
+
+**http://localhost**
+
+The application is exposed through the Nginx reverse proxy.
+
+### 5. Stop the Application
+
+```bash
+docker compose down
+```
+
+To remove containers and the persistent database volume:
+
+```bash
+docker compose down -v
+```
+
+**Warning:** Removing the volume permanently deletes the stored MySQL data.
+
+## Docker Implementation
+
+### Backend Container
+
+The backend Dockerfile uses a multi-stage build approach:
+
+- Python 3.12 slim base image.
+- Dependencies installed in a separate build stage.
+- Production dependencies copied into the runtime image.
+- Non-root application user for improved security.
+- Health check endpoint for container monitoring.
+
+### Frontend Container
+
+The frontend Dockerfile uses a multi-stage build:
+
+- Node.js 22 Alpine for building the React application.
+- Vite production build generates optimized static assets.
+- Nginx Alpine serves the generated frontend files.
+- Build-time environment configuration through Docker build arguments.
+
+### Docker Compose
+
+Docker Compose coordinates the following services:
+
+- MySQL database
+- Flask backend
+- React frontend
+- Nginx reverse proxy
+
+It also configures service dependencies, health checks, bridge networks, and persistent database storage.
+
+## CI/CD Pipeline
+
+The project includes a GitHub Actions workflow to automate application validation and container delivery.
+
+The pipeline covers the following stages:
+
+1. **Lint and Test:** Runs automated validation and backend tests.
+2. **Docker Build:** Builds application container images.
+3. **Security Scan:** Uses Trivy to scan container images for vulnerabilities.
+4. **Docker Hub Push:** Publishes container images to Docker Hub.
+
+The workflow is maintained under:
+
+`.github/workflows/`
+
+Container registry credentials should be configured using GitHub Actions repository secrets rather than hardcoded credentials.
+
+## Backend API Reference
+
+Base API path:
+
+`/api`
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/health` | Check backend health |
+| GET | `/api/employees` | Retrieve all employees |
+| GET | `/api/employees/search?q=query` | Search employees |
+| GET | `/api/employees/<id>` | Retrieve an employee |
+| POST | `/api/employees` | Create an employee |
+| PUT | `/api/employees/<id>` | Update an employee |
+| DELETE | `/api/employees/<id>` | Delete an employee |
+
+### Health Check Example
+
+```bash
+curl http://localhost/api/health
+```
+
+### Retrieve Employees
+
+```bash
+curl http://localhost/api/employees
+```
+
+## Running Backend Tests
+
+The backend test suite uses Pytest with an isolated in-memory SQLite database.
+
+Navigate to the backend directory:
+
 ```bash
 cd backend
-python3 -m venv venv
-source venv/bin/activate
 ```
 
-### 2. Install Dependencies
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Run the Flask Server
+Run tests:
 
 ```bash
-python app.py
-```
-
-The backend server will start on `http://localhost:5000`.
-
----
-
-## Frontend Setup & Running
-
-### 1. Install Node Dependencies
-
-```bash
-cd frontend
-npm install
-```
-
-### 2. Run the Vite Development Server
-
-```bash
-npm run dev
-```
-
-The frontend dashboard will be available at `http://localhost:3000` (or `http://localhost:5173`).
-
----
-
-## REST API Reference
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/api/health` | Service health status check |
-| `GET` | `/api/employees` | Retrieve all employee records |
-| `GET` | `/api/employees/search?q=<query>` | Search employees by name, email, department, or role |
-| `GET` | `/api/employees/<id>` | Retrieve a single employee by ID |
-| `POST` | `/api/employees` | Create a new employee |
-| `PUT` | `/api/employees/<id>` | Update an existing employee |
-| `DELETE` | `/api/employees/<id>` | Delete an employee record |
-
----
-
-## Example API Requests
-
-### 1. Health Check
-```bash
-curl -X GET http://localhost:5000/api/health
-```
-**Response (200 OK):**
-```json
-{
-  "status": "healthy"
-}
-```
-
-### 2. Get All Employees
-```bash
-curl -X GET http://localhost:5000/api/employees
-```
-
-### 3. Search Employees
-```bash
-curl -X GET "http://localhost:5000/api/employees/search?q=Engineering"
-```
-
-### 4. Create Employee
-```bash
-curl -X POST http://localhost:5000/api/employees \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Jane Doe",
-    "email": "jane.doe@example.com",
-    "department": "Engineering",
-    "position": "Senior Backend Developer",
-    "salary": 92000.00
-  }'
-```
-
-### 5. Update Employee
-```bash
-curl -X PUT http://localhost:5000/api/employees/1 \
-  -H "Content-Type: application/json" \
-  -d '{
-    "salary": 98000.00,
-    "position": "Lead Backend Developer"
-  }'
-```
-
-### 6. Delete Employee
-```bash
-curl -X DELETE http://localhost:5000/api/employees/1
-```
-
----
-
-## Running Automated Tests
-
-The test suite runs against an isolated, in-memory SQLite database (`sqlite:///:memory:`) so tests can execute rapidly and independently of an active MySQL database server.
-
-Run tests using pytest:
-
-```bash
-cd backend
 python -m pytest tests/ -v
 ```
 
-### Test Coverage:
-- Health check verification
-- Employee listing (empty & populated states)
-- Employee creation with valid data
-- Input validation (missing fields, invalid email format, negative salary)
+The test suite covers:
+
+- API health checks
+- Employee CRUD operations
+- Input validation
 - Duplicate email prevention
-- ID-based lookup and 404 handling
-- Multi-field search
-- Updates (full & partial)
-- Deletion
+- Employee search
+- Error handling and HTTP responses
+
+## Security and Reliability Considerations
+
+The project incorporates several practices commonly used in containerized environments:
+
+- Non-root user execution in the backend container.
+- Environment-based configuration for sensitive credentials.
+- Docker image vulnerability scanning using Trivy.
+- Health checks for service availability.
+- Persistent database storage using Docker volumes.
+- Isolated service communication using Docker networks.
+- Separation of frontend, backend, and database responsibilities.
+
+## Future Improvements
+
+Potential enhancements include:
+
+- Automated deployment to a cloud environment such as Azure.
+- Container image publishing with versioned tags.
+- Kubernetes deployment using AKS.
+- Infrastructure provisioning using Terraform.
+- Centralized monitoring using Prometheus and Grafana.
+- Enhanced logging and observability.
+
+## Author
+
+**Gamil Jacob Thomas**
+
+B.Tech Computer Science and Engineering | 2026 Graduate
+
+GitHub: https://github.com/Gamjt19
+
+Portfolio: https://gamjt.vercel.app
 
 ---
 
-## Future DevOps Roadmap
-
-The following will be configured in subsequent containerization phases:
-- [ ] Backend multi-stage `Dockerfile` (Python slim base image, non-root user).
-- [ ] Frontend `Dockerfile` (Node builder + Nginx static asset server).
-- [ ] `docker-compose.yml` orchestrating MySQL, Flask backend, and React/Nginx frontend.
-- [ ] Custom bridge network with DNS container discovery (`db`, `backend`, `frontend`).
-- [ ] Persistent named Docker volume for MySQL data (`mysql_data`).
-- [ ] Container health checks (`HEALTHCHECK` instructions).
-- [ ] GitHub Actions CI/CD pipeline (Docker build, Trivy security scan, and Docker Hub push).
+*This project was developed to explore full-stack application development and practical DevOps engineering concepts through containerization, automation, and service orchestration.*
